@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Title</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+
+    <!-- Water CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+  </head>
+
+  <body>
+    <header>
+      <!-- place navbar here -->
+    </header>
+    <main>
+      <div class="container p-5">
+        <h1>Login</h1>
+        <form action="" id="login-form">
+          <label for="username">Username:</label>
+          <input type="text" value="john" name="username" id="username">
+          <label for="password">Password:</label>
+          <input type="password" value="test" name="password" id="password">
+          <button type="submit">Login</button>
+        </form>
+      </div>
+    </main>
+    <footer>
+      <!-- place footer here -->
+       <script>
+        const loginForm = document.querySelector('#login-form');
+
+        async function authUser() {
+          try {
+            const allCookies = document.cookie;
+          
+            // Extracting the 'uid' cookie value
+            const uidCookie = allCookies.split('; ').find(cookie => cookie.startsWith('uid'));
+            if (uidCookie) {
+              const uid = uidCookie.split('=')[1];
+              const token = { token: uid };
+
+              console.log(token);
+              
+              const response = await fetch(`http://localhost:8000`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(token)
+              });
+
+              if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+              }
+
+              const result = await response.json();
+              const { access } = result;
+              
+              console.log(access);
+              
+              if (access === 'granted') {
+                window.location.href = './';
+              }
+            }
+          } catch (error) {
+            console.error('Error in authUser:', error);
+            window.location.href = './login';
+          }
+        }
+
+        async function submitLoginForm(e) {
+          e.preventDefault();
+
+          const formData = new FormData(this);
+          const userInfo = {};
+
+          formData.forEach((value, key) => {
+            userInfo[key] = value;
+          });
+
+          try {
+            const response = await fetch('http://localhost:8000/login', {
+              method: 'POST',
+              headers:{
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(userInfo)
+            })
+
+            if (!response.ok) {
+              throw new Error('Incorrect username or password');
+            }
+
+            const result = await response.json();
+            const { access } = result;
+
+            console.log(access);
+            
+            if (access === 'granted') {
+              window.location.href = './';
+            }
+          } catch (err) {
+            console.log(err);
+          }
+        }
+
+        loginForm.addEventListener('submit', submitLoginForm);
+        document.addEventListener('DOMContentLoaded', async () => {
+          await authUser();
+        });
+      </script>
+    </footer>
+  </body>
+</html>

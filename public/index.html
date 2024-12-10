@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Title</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+
+    <!-- Bootstrap CSS v5.2.1 -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
+      crossorigin="anonymous"
+    />
+  </head>
+
+  <body>
+    <header>
+      <nav class="navbar navbar-expand navbar-light bg-light">
+        <div class="nav navbar-nav">
+          <a class="nav-item nav-link active" href="#" aria-current="page"
+            >Home <span class="visually-hidden">(current)</span></a
+          >
+          <a class="btn btn-dark" href="" onclick="logout()">Log out</a>
+        </div>
+      </nav>
+      
+      <!-- place navbar here -->
+      <!-- Modal -->
+      <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="exampleModalLabel">Add Task</h1>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="new-task-form">
+            <div class="modal-body">
+                <div class="mb-3">
+                  <label for="title" class="col-form-label">Title:</label>
+                  <input type="text" name="title" class="form-control" id="title">
+                </div>
+                <div class="mb-3">
+                  <label for="status" class="col-form-label">Status:</label>
+                  <select class="form-select" name="status" id="status" aria-label="Default select example">
+                    <option selected>Open this select menu</option>
+                    <option value="pending">Pending</option>
+                    <option value="in-progress">In-progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="submit" class="btn btn-primary">Save changes</button>
+            </div>
+          </form>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main>
+      <div class="container p-5">
+        <div class="row">
+          <div class="col">
+            <div class="container-fluid">
+              <h5>Tasks</h5>
+              <!-- Button trigger modal -->
+              <button type="button" class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#exampleModal">
+                Add Task
+              </button>
+              <!-- Hover added -->
+              <div class="list-group list-group-flush task-list-group">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <!-- place footer here -->
+      <script>
+        const addTaskForm = document.querySelector('#new-task-form');
+
+        function logout() {
+          const allCookies = document.cookie;
+          
+          // Extracting the 'uid' cookie value
+          const uidCookie = allCookies.split('; ').find(cookie => cookie.startsWith('uid'));
+          if (!uidCookie) {
+            throw new Error('UID cookie not found');
+            window.location.href = './login';
+          }
+          delete_cookie(uidCookie)
+          function delete_cookie(name) {
+            document.cookie = name +'=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+          }
+        }
+
+        function getCookie(cname) {
+          const allCookies = document.cookie;
+          
+          // Extracting the 'uid' cookie value
+          const cookies = allCookies.split('; ').find(cookie => cookie.startsWith(cname));
+          if (!cookies) {
+            throw new Error('Cookie not found');
+          }
+        
+          const cookie = cookies.split('=')[1];
+          return cookie;
+        }
+
+        async function authUser() {
+          try {
+            const allCookies = document.cookie;
+          
+            // Extracting the 'uid' cookie value
+            const uidCookie = allCookies.split('; ').find(cookie => cookie.startsWith('uid'));
+            if (!uidCookie) {
+              throw new Error('UID cookie not found');
+            }
+          
+            const uid = uidCookie.split('=')[1];
+            const token = { token: uid };
+
+            const response = await fetch(`http://localhost:8000`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(token)
+            });
+
+            if (!response.ok) {
+              throw new Error(`Server error: ${response.status}`);
+            }
+
+            const result = await response.json();
+            
+            const { access } = result;
+            
+            if (access !== 'granted') {
+              window.location.href = './login'
+            } else {
+              const { id, username } = result;
+              document.cookie = `id=${id}`;
+              await getTasks(id);
+            }
+            
+          } catch (error) {
+            console.error('Error in authUser:', error);            
+            window.location.href = './login'
+          }
+        }
+        
+        function loadStatus(id, status) {
+          const statusColors = {
+            'pending': 'bg-body-secondary',
+            'in-progress': 'text-primary-emphasis bg-primary-subtle',
+            'completed': 'text-success-emphasis bg-success-subtle'
+          };
+          
+          return `
+          <select class="form-select w-25 ms-auto ${statusColors[status]}" name="status" id="status" aria-label="Default select example" data-id="${id}" data-status="${status}" onChange="handleChange(event)">
+            <option class="bg-body-secondary" value="pending" ${status === 'pending' ? 'selected' : ''}>Pending</option>
+            <option class="text-primary-emphasis bg-primary-subtle" value="in-progress" ${status === 'in-progress' ? 'selected' : ''}>In-progress</option>
+            <option class="text-success-emphasis bg-success-subtle" value="completed" ${status === 'completed' ? 'selected' : ''}>Completed</option>
+          </select>
+          `;
+        }
+
+        function handleChange(event) {          
+          const status = event.target.dataset.status;
+          const currentState = event.target.value;
+          const updateBtn = event.target.parentNode.querySelector('.update-btn');
+
+          if(status !== currentState) {
+            updateBtn.classList.remove('invisible');
+          } else {
+            updateBtn.classList.add('invisible');
+          }
+          
+          changeBackgroundColor(event.target);
+        }
+        
+        function changeBackgroundColor(selectElement) {
+          const statusColors = {
+            'pending': 'bg-body-secondary',
+            'in-progress': 'text-primary-emphasis bg-primary-subtle',
+            'completed': 'text-success-emphasis bg-success-subtle'
+          };
+
+          // Remove existing color classes
+          selectElement.classList.remove('bg-body-secondary', 'text-primary-emphasis', 'bg-primary-subtle', 'text-success-emphasis', 'bg-success-subtle');
+
+          // Add the new color class
+          const newColorClass = statusColors[selectElement.value];
+          selectElement.classList.add(...newColorClass.split(' '));
+        }
+
+        async function updateTask(id) {
+          const selectbox = document.querySelector(`select[data-id='${id}']`);
+          const status = selectbox.value;
+          
+          const updateInfo = {
+            id,
+            status
+          }
+          
+          try {
+            const response = await fetch(`http://localhost:8000/tasks`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(updateInfo)
+            });
+  
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+          
+            console.log(`Task updated successfully`);
+            const userId =  getCookie('id');
+            getTasks(userId);
+          } catch (error) {
+            console.log('Could not update task\n', error);
+          }
+        }
+
+        async function deleteTask(id) {
+          try {
+            const response = await fetch(`http://localhost:8000/tasks/${id}`, {
+              method: 'DELETE',
+            })
+
+            console.log(response);
+    
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            
+            console.log(`Task with ID ${id} deleted successfully`);
+            const userId =  getCookie('id');
+            getTasks(userId);
+          } catch (error) {
+            console.log('Could not delete task', error);
+          }
+        }
+
+        function loadTask(tasks) {
+          const taskList = document.querySelector('.task-list-group');
+          const html = tasks.map(task => {
+            return `
+            <label class="list-group-item d-flex align-items-center">
+              <span>${task.title}</span>
+              ${loadStatus(task.id, task.status)}
+              <button type="button" data-id="${task.id}" onClick='updateTask(${task.id})' class="btn btn-dark update-btn ms-2 invisible">Update</button>
+              <button type="button" data-id="${task.id}" onClick='deleteTask(${task.id})' class="btn btn-dark delete-btn ms-2">Delete</button>
+            </label>
+            `;
+          }).join('');
+
+          taskList.innerHTML = html;
+        }
+
+        async function getTasks(id) {
+          try {
+            const response = await fetch(`http://localhost:8000/tasks?id=${id}`);
+            const tasks = await response.json();     
+            
+            if (!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+
+            loadTask(tasks);
+          } catch (error) {
+            console.log('could no get task', error);
+          }
+        }
+      
+        async function addNewTask(e) {
+          e.preventDefault();
+          const formData = new FormData(this);
+          const userId =  getCookie('id');
+          const newTask = {
+            id: userId,
+          };
+
+          formData.forEach((value, key) => {
+            newTask[key] = value;
+          })
+          
+          try {
+            const response = await fetch(`http://localhost:8000/tasks`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(newTask)
+            });
+
+            if(!response.ok) {
+              throw new Error('Network response was not ok');
+            }
+            console.log(`Task added successfully`);
+
+            getTasks(userId);
+          } catch (error) {
+            console.log(`Failed to add task ${error}`); 
+          }
+        }
+
+        document.addEventListener('DOMContentLoaded', async () => {
+          await authUser();
+        });
+        addTaskForm.addEventListener('submit', addNewTask);
+      </script>
+    </footer>
+    <!-- Bootstrap JavaScript Libraries -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"
+      integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r"
+      crossorigin="anonymous"
+    ></script>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js"
+      integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+"
+      crossorigin="anonymous"
+    ></script>
+  </body>
+</html>

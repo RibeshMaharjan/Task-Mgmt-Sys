@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Sign Up</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+
+    <!-- Water CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+  </head>
+
+  <body>
+    <header>
+      <!-- place navbar here -->
+    </header>
+    <main>
+      <div class="container p-5">
+        <h1>Sign Up</h1>
+        <form action="" id="signup-form">
+          <label for="username">Username:</label>
+          <input type="text" value="john" name="username" id="username">
+          <label for="password">Password:</label>
+          <input type="password" value="test" name="password" id="password">
+          <button type="submit">Sign Up</button>
+        </form>
+      </div>
+    </main>
+    <footer>
+      <!-- place footer here -->
+      <script>
+        const signupForm = document.querySelector('#signup-form');
+
+        async function authUser() {
+          try {
+            const allCookies = document.cookie;
+          
+            // Extracting the 'uid' cookie value
+            const uidCookie = allCookies.split('; ').find(cookie => cookie.startsWith('uid'));
+            if (uidCookie) {
+              const uid = uidCookie.split('=')[1];
+              const token = { token: uid };
+
+              console.log(token);
+              
+              const response = await fetch(`http://localhost:8000`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(token)
+              });
+
+              if (!response.ok) {
+                throw new Error(`Server error: ${response.status}`);
+              }
+
+              const result = await response.json();
+              const { access } = result;
+              
+              console.log(access);
+              
+              if (access === 'granted') {
+                window.location.href = './';
+              }
+            }
+          } catch (error) {
+            console.error('Error in authUser:', error);
+            window.location.href = './login';
+          }
+        }
+
+        async function submitSignupForm(e) {
+          e.preventDefault();
+
+          const formData = new FormData(this);
+          const newuserInfo = {};
+
+          formData.forEach((value, key) => {
+            newuserInfo[key] = value;
+          });
+
+          try {
+            const response = await fetch('http://localhost:8000/signup', {
+              method: 'POST',
+              headers:{
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(newuserInfo)
+            })
+
+            if (!response.ok) {
+              throw new Error('Invalid username or password');
+            }
+
+            const result = await response.json();
+            const { message } = result;
+
+            console.log(message);
+            
+            if (message === 'success') {
+              window.location.href = './login';
+            }
+          } catch (err) {
+            console.log(err);
+          }
+        }
+
+        signupForm.addEventListener('submit', submitSignupForm);
+      </script>
+    </footer>
+  </body>
+</html>
